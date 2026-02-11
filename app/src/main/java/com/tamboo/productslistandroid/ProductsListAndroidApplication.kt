@@ -4,6 +4,7 @@ import android.app.Application
 import com.tamboo.data.di.dataModule
 import com.tamboo.database.di.databaseModule
 import com.tamboo.network.di.networkModule
+import com.tamboo.productslist.di.productsListModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 
@@ -15,6 +16,7 @@ class ProductsListAndroidApplication : Application() {
             modules(networkModule,
                 databaseModule,
                 dataModule,
+                productsListModule,
             )
         }
     }

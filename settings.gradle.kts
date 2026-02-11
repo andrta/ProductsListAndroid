@@ -27,3 +27,5 @@ include(":core:database")
 include(":core:data")
 include(":core:ui")
 include(":core:testing")
+
+include(":features:productslist")
