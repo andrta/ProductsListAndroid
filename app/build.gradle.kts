@@ -47,6 +47,13 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
+    // UI & Navigation
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.material.icons.extended)
+
+    // Image Loading
+    implementation(libs.coil.compose)
+
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
