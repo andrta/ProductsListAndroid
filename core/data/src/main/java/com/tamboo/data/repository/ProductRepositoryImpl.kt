@@ -7,20 +7,49 @@ import com.tamboo.domain.repository.ProductRepository
 import com.tamboo.network.retrofit.FakeStoreApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.concurrent.TimeUnit
 
 class ProductRepositoryImpl(
     private val api: FakeStoreApi,
     private val localDataSource: ProductLocalDataSource
 ) : ProductRepository {
+    // Definiamo la durata della cache (es. 1 Ora)
+    private val CACHE_TIMEOUT = TimeUnit.HOURS.toMillis(1)
 
-    override suspend fun getProducts(): List<Product> {
-        val remoteProducts = api.getProducts()
+    // Aggiungiamo il parametro forceUpdate (default false)
+    override suspend fun getProducts(forceUpdate: Boolean): List<Product> {
 
-        val favoriteIds = localDataSource.getFavoriteIds()
+        // 1. Controlliamo se la cache è valida
+        val isCacheValid = localDataSource.isCacheValid(CACHE_TIMEOUT)
 
-        return remoteProducts.map { dto ->
-            dto.toDomain(isFavorite = favoriteIds.contains(dto.id))
+        // 2. Logica di aggiornamento:
+        // Scarichiamo se:
+        // - L'utente ha forzato l'update (Pull-to-refresh)
+        // - OPPURE la cache è scaduta/vuota
+        val shouldFetchFromNetwork = forceUpdate || !isCacheValid
+
+        if (shouldFetchFromNetwork) {
+            try {
+                val remoteProducts = api.getProducts()
+                localDataSource.cacheResponse(remoteProducts) // Questo aggiorna anche lastUpdated
+            } catch (e: Exception) {
+                // Se la rete fallisce:
+                // - Se era un forceUpdate, potremmo voler lanciare errore alla UI
+                // - Se era un update automatico, silenziamo l'errore e usiamo la cache vecchia
+                if (forceUpdate) throw e
+                e.printStackTrace()
+            }
         }
+
+        // 3. Ritorniamo SEMPRE dal DB (SSOT)
+        val localProducts = localDataSource.getAllProducts()
+
+        if (localProducts.isEmpty() && shouldFetchFromNetwork) {
+            // Se il DB è vuoto e abbiamo provato a scaricare (fallendo), lanciamo errore
+            throw Exception("Dati non disponibili offline.")
+        }
+
+        return localProducts.map { it.toDomain() }
     }
 
     override fun getFavoriteProducts(): Flow<List<Product>> {
