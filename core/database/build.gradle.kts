@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.tamboo.core.database"
+    namespace = "com.tamboo.database"
     compileSdk = 36
 
     defaultConfig {

@@ -1,11 +1,10 @@
 plugins {
-    // CAMBIO FONDAMENTALE: Usa i plugin Android, NON kotlin.jvm
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
 }
 
 android {
-    namespace = "com.tamboo.productslistandroid.core.data"
+    namespace = "com.tamboo.data"
     compileSdk = 36
 
     defaultConfig {
@@ -20,41 +19,49 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+            isIncludeAndroidResources = true
+        }
+    }
+}
+
+// 🔥 FIX NUCLEARE PER ROBOLECTRIC + REALM
+// Usiamo la resolutionStrategy per SOSTITUIRE fisicamente l'artefatto Android con quello JVM.
+// Questo risolve il conflitto che causava la sparizione di "SoLoader".
+configurations.all {
+    if (name.contains("UnitTest")) {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "io.realm.kotlin" && requested.name == "library-base") {
+                // Forza l'uso di library-base-jvm usando la versione definita nel TOML
+                useTarget("io.realm.kotlin:library-base-jvm:${libs.versions.realm.get()}")
+                because("I test Robolectric girano su JVM e richiedono i driver nativi per Mac/PC")
+            }
+        }
+    }
 }
 
 dependencies {
-    implementation(project(":core:domain"))   // Questo è Kotlin Puro (OK, Android può vedere Kotlin)
-    implementation(project(":core:network"))  // Questo è Kotlin Puro (OK)
-    implementation(project(":core:database")) // Questo è Android (OK, ora siamo Android anche noi)
+    implementation(project(":core:domain"))
+    implementation(project(":core:network"))
+    implementation(project(":core:database"))
 
-    // Questo impedisce che MockK o altre lib tirino dentro Kotlin 2.1
-    implementation(platform("org.jetbrains.kotlin:kotlin-bom:1.9.23"))
-
-    // Koin & Coroutines
     implementation(libs.koin.android)
     implementation(libs.androidx.core.ktx)
-
-    // Realm (Necessario per vedere gli oggetti Realm restituiti dal DB)
-    implementation(libs.realm.base)
-
     implementation(libs.kotlinx.coroutines.core)
+
+    // Realm (Versione Android standard per l'app)
+    implementation(libs.realm.base)
 
     // Test Dependencies
     testImplementation(libs.junit)
-    testImplementation(libs.mockk) // Fondamentale per mockare API e DB
-    testImplementation(libs.kotlinx.coroutines.test) // Per testare le sospensioni
-    testImplementation(libs.turbine) // Opzionale, ma ottimo per testare i Flow
-}
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.turbine)
 
-// 🔥 AGGIUNGI QUESTO ALLA FINE DEL FILE
-// Forza Gradle a usare versioni compatibili anche se altre lib ne chiedono di più nuove
-configurations.all {
-    resolutionStrategy.eachDependency {
-        if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-stdlib")) {
-            useVersion("1.9.23")
-        }
-        if (requested.group == "org.jetbrains.kotlinx" && requested.name.startsWith("kotlinx-coroutines")) {
-            useVersion("1.7.3")
-        }
-    }
+    // Realm JVM: La aggiungiamo, ma la "magia" vera la fa il blocco resolutionStrategy sopra
+    testImplementation(libs.realm.base.jvm)
 }
