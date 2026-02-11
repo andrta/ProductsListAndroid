@@ -4,46 +4,42 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tamboo.domain.model.Product
 import com.tamboo.domain.repository.ProductRepository
+import com.tamboo.domain.usecase.GetProductsUseCase
+import com.tamboo.domain.usecase.ToggleFavoriteUseCase
+import com.tamboo.productslist.uistate.ProductsListUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ProductsListViewModel(
-    private val repository: ProductRepository
+    private val getProductsUseCase: GetProductsUseCase,
+    private val toggleFavoriteUseCase: ToggleFavoriteUseCase
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<ListUiState>(ListUiState.Loading)
-    val uiState: StateFlow<ListUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<ProductsListUiState>(ProductsListUiState.Loading)
+    val uiState: StateFlow<ProductsListUiState> = _uiState.asStateFlow()
 
     init {
         loadProducts()
     }
-
     fun loadProducts(forceUpdate: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = ListUiState.Loading
+            _uiState.value = ProductsListUiState.Loading
             try {
-                // Repository decide se usare Cache o Rete (Offline-First)
-                val products = repository.getProducts(forceUpdate)
-                _uiState.value = ListUiState.Success(products)
+                // Chiamata all'Use Case invece del Repository
+                val products = getProductsUseCase(forceUpdate)
+                _uiState.value = ProductsListUiState.Success(products)
             } catch (e: Exception) {
-                _uiState.value = ListUiState.Error(e.message ?: "Errore sconosciuto")
+                _uiState.value = ProductsListUiState.Error(e.message ?: "Errore")
             }
         }
     }
 
     fun toggleFavorite(product: Product) {
         viewModelScope.launch {
-            repository.toggleFavorite(product)
-            // Ricarichiamo per aggiornare i cuori (SSOT: la verità è nel DB)
+            toggleFavoriteUseCase(product)
             loadProducts(forceUpdate = false)
         }
     }
-}
-
-sealed class ListUiState {
-    data object Loading : ListUiState()
-    data class Success(val products: List<Product>) : ListUiState()
-    data class Error(val message: String) : ListUiState()
 }

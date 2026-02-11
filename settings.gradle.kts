@@ -29,3 +29,4 @@ include(":core:ui")
 include(":core:testing")
 
 include(":features:productslist")
+include(":features:favorites")
