@@ -3,6 +3,8 @@ package com.tamboo.productslistandroid
 import android.app.Application
 import com.tamboo.data.di.dataModule
 import com.tamboo.database.di.databaseModule
+import com.tamboo.domain.di.domainModule
+import com.tamboo.favorites.di.favoritesModule
 import com.tamboo.network.di.networkModule
 import com.tamboo.productslist.di.productsListModule
 import org.koin.android.ext.koin.androidContext
@@ -13,10 +15,13 @@ class ProductsListAndroidApplication : Application() {
         super.onCreate()
         startKoin {
             androidContext(this@ProductsListAndroidApplication)
-            modules(networkModule,
+            modules(
+                networkModule,
                 databaseModule,
                 dataModule,
+                domainModule,
                 productsListModule,
+                favoritesModule,
             )
         }
     }

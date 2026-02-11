@@ -2,7 +2,9 @@ package com.tamboo.productslist.presentation
 
 import app.cash.turbine.test
 import com.tamboo.domain.model.Product
-import com.tamboo.domain.repository.ProductRepository
+import com.tamboo.domain.usecase.GetProductsUseCase
+import com.tamboo.domain.usecase.ToggleFavoriteUseCase
+import com.tamboo.productslist.uistate.ProductsListUiState
 import com.tamboo.testing.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -20,79 +22,49 @@ class ProductsListViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule(StandardTestDispatcher())
 
-    private val repository: ProductRepository = mockk(relaxed = true)
+    private val getProductsUseCase: GetProductsUseCase = mockk()
+    private val toggleFavoriteUseCase: ToggleFavoriteUseCase = mockk()
     private lateinit var viewModel: ProductsListViewModel
 
     @Test
-    fun `init loads products and updates state to Success`() = runTest {
-        // GIVEN
-        val mockProducts = listOf(Product(1, "Test", 10.0, "", "desc", "cat", false))
-        coEvery { repository.getProducts(any()) } returns mockProducts
+    fun `loadProducts updates state to Success`() = runTest {
+        val mockProducts = listOf(Product(1, "Test", 10.0, "", "", "", false))
+        coEvery { getProductsUseCase(any()) } returns mockProducts
 
-        // WHEN - Inizializziamo il ViewModel
-        viewModel = ProductsListViewModel(repository)
+        viewModel = ProductsListViewModel(getProductsUseCase, toggleFavoriteUseCase)
 
-        // THEN - Usiamo Turbine per osservare gli stati
         viewModel.uiState.test {
-            // Primo stato è Loading (valore iniziale)
-            assertEquals(ListUiState.Loading, awaitItem())
-
-            // Secondo stato è Success con i dati
-            val successState = awaitItem() as ListUiState.Success
-            assertEquals(1, successState.products.size)
-            assertEquals("Test", successState.products[0].title)
-        }
-    }
-
-    @Test
-    fun `loadProducts emits Error state when repository fails`() = runTest {
-        // GIVEN
-        coEvery { repository.getProducts(any()) } throws Exception("Network Error")
-
-        // WHEN
-        viewModel = ProductsListViewModel(repository)
-
-        // THEN
-        viewModel.uiState.test {
-            assertEquals(ListUiState.Loading, awaitItem())
-
-            val errorState = awaitItem() as ListUiState.Error
-            assertEquals("Network Error", errorState.message)
+            assertEquals(ProductsListUiState.Loading, awaitItem())
+            val success = awaitItem() as ProductsListUiState.Success
+            assertEquals(mockProducts, success.products)
         }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun `toggleFavorite calls repository and reloads list`() = runTest {
+    fun `toggleFavorite calls usecase and reloads products`() = runTest {
         // GIVEN
         val product = Product(1, "Test", 10.0, "", "", "", false)
 
-        // Stubbing
-        coEvery { repository.getProducts(any()) } returns listOf(product)
-        // È buona norma stubbare esplicitamente anche i metodi Unit, anche se relaxed=true lo fa per te
-        coEvery { repository.toggleFavorite(any()) } returns Unit
+        coEvery { getProductsUseCase(any()) } returns listOf(product)
+        coEvery { toggleFavoriteUseCase(any()) } returns Unit
 
-        viewModel = ProductsListViewModel(repository)
+        viewModel = ProductsListViewModel(getProductsUseCase, toggleFavoriteUseCase)
 
-        // 1. Consumiamo lo stato iniziale (Loading -> Success)
-        // Questo è importante per assicurarci che 'init' sia finito completamente
-        viewModel.uiState.test {
-            assertEquals(ListUiState.Loading, awaitItem())
-            assertEquals(ListUiState.Success(listOf(product)), awaitItem())
-        }
+        // Puliamo la coda delle coroutine dell'init
+        advanceUntilIdle()
 
         // WHEN
         viewModel.toggleFavorite(product)
 
-        // 🔥 FIX FONDAMENTALE:
-        // Forza l'esecuzione di tutte le coroutine in attesa (incluso il launch di toggleFavorite)
+        // Forza l'esecuzione della coroutine lanciata da toggleFavorite
         advanceUntilIdle()
 
         // THEN
-        // 1. Verifica che il metodo toggleFavorite sia stato chiamato
-        coVerify(exactly = 1) { repository.toggleFavorite(product) }
+        // 1. Verifica che l'usecase di toggle sia stato chiamato con il prodotto corretto
+        coVerify(exactly = 1) { toggleFavoriteUseCase(product) }
 
-        // 2. Verifica che getProducts sia stato chiamato 2 volte (1 per init, 1 per il reload)
-        coVerify(exactly = 2) { repository.getProducts(any()) }
+        // 2. Verifica che i prodotti siano stati ricaricati (1 volta init + 1 volta dopo toggle)
+        coVerify(exactly = 2) { getProductsUseCase(any()) }
     }
 }

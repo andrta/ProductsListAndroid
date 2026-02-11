@@ -78,4 +78,5 @@ dependencies {
     implementation(project(":core:ui"))
 
     implementation(project(":features:productslist"))
+    implementation(project(":features:favorites"))
 }
