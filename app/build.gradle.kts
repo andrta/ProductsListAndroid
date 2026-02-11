@@ -30,6 +30,14 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.11"
     }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/LICENSE.md" // <--- AGGIUNGI QUESTA RIGA
+            excludes += "META-INF/LICENSE-notice.md" // Spesso serve anche questa
+        }
+    }
 }
 
 dependencies {

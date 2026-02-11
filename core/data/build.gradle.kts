@@ -33,10 +33,7 @@ dependencies {
     implementation(libs.realm.base)
 
     // --- UNIT TEST (src/test) ---
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.turbine)
+    testImplementation(project(":core:testing"))
 
     // --- INSTRUMENTED TEST (src/androidTest) ---
     androidTestImplementation(libs.androidx.junit)
