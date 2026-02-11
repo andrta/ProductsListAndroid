@@ -1,15 +1,16 @@
 package com.tamboo.data.datasource
 
-import app.cash.turbine.test
 import com.tamboo.database.model.ProductEntity
+import com.tamboo.network.model.ProductDto
+import com.tamboo.network.model.RatingDto
 import io.realm.kotlin.Realm
 import io.realm.kotlin.RealmConfiguration
 import io.realm.kotlin.ext.query
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -21,121 +22,98 @@ class RealmProductDataSourceTest {
 
     @Before
     fun setup() {
-        // Configura un Realm IN-MEMORY.
-        // Poiché questo test gira su un dispositivo Android (Emulatore),
-        // userà le librerie native Android corrette.
         val config = RealmConfiguration.Builder(schema = setOf(ProductEntity::class))
             .inMemory()
             .name("test-realm-instrumented")
             .build()
-
         realm = Realm.open(config)
         dataSource = RealmProductDataSource(realm)
     }
 
     @After
     fun tearDown() {
-        // Chiude il DB e libera la memoria dopo ogni test
         realm.close()
     }
 
     @Test
-    fun toggleFavorite_adds_product_if_it_does_not_exist() = runTest {
-        // GIVEN - Il DB è vuoto all'inizio
-
-        // WHEN - Chiamiamo toggle per aggiungere un prodotto che non c'è
-        dataSource.toggleFavorite(
-            id = 1,
-            title = "Zaino Test",
-            price = 50.0,
-            image = "http://img.com/1",
-            description = "Descrizione test",
-            category = "Test Category"
-        )
-
-        // THEN - Verifichiamo direttamente su Realm che sia stato salvato
-        val savedProduct = realm.query<ProductEntity>("id == $0", 1).first().find()
-
-        assertNotNull("Il prodotto dovrebbe essere stato salvato nel DB", savedProduct)
-        assertEquals("Zaino Test", savedProduct?.title)
-        assertTrue("Il flag isFavorite dovrebbe essere true", savedProduct?.isFavorite == true)
-    }
-
-    @Test
-    fun toggleFavorite_removes_product_if_it_already_exists() = runTest {
-        // GIVEN - Inseriamo manualmente un prodotto nel DB
+    fun cacheResponse_saves_data_and_preserves_isFavorite_status() = runTest {
+        // GIVEN - Un prodotto esiste già nel DB ed è PREFERITO
         realm.write {
             copyToRealm(ProductEntity().apply {
                 id = 99
-                title = "Da Cancellare"
-                price = 10.0
+                title = "Titolo Vecchio"
+                isFavorite = true // Utente l'ha messo favorito
+            })
+        }
+
+        // DTO che arriva dalla rete (stesso ID, titolo aggiornato, ma non sa nulla dei preferiti)
+        val networkData = listOf(
+            ProductDto(
+                id = 99,
+                title = "Titolo Aggiornato",
+                price = 20.0,
+                description = "",
+                category = "",
+                image = "",
+                rating = RatingDto(0.0, 0)
+            )
+        )
+
+        // WHEN - Aggiorniamo la cache
+        dataSource.cacheResponse(networkData)
+
+        // THEN
+        val updatedProduct = realm.query<ProductEntity>("id == $0", 99).first().find()
+        assertNotNull(updatedProduct)
+
+        // 1. I dati devono essere aggiornati
+        assertEquals("Titolo Aggiornato", updatedProduct?.title)
+
+        // 2. MA il flag isFavorite deve essere rimasto TRUE (preservato)
+        assertTrue(
+            "Il flag isFavorite deve essere preservato dopo update API",
+            updatedProduct?.isFavorite == true
+        )
+    }
+
+    @Test
+    fun toggleFavorite_toggles_flag_instead_of_deleting() = runTest {
+        // GIVEN - Prodotto esistente e preferito
+        realm.write {
+            copyToRealm(ProductEntity().apply {
+                id = 10
+                title = "Test"
                 isFavorite = true
             })
         }
 
-        // Verifica preliminare: il prodotto deve esistere
-        val countBefore = realm.query<ProductEntity>("id == $0", 99).count().find()
-        assertEquals(1, countBefore)
+        // WHEN - Togliamo il favorito
+        dataSource.toggleFavorite(10, "", 0.0, "", "", "")
 
-        // WHEN - Chiamiamo toggle sullo stesso ID (dovrebbe rimuoverlo)
-        dataSource.toggleFavorite(
-            id = 99,
-            title = "Titolo Ignorato", // Non importa, tanto cancella
-            price = 0.0,
-            image = "",
-            description = "",
-            category = ""
-        )
+        // THEN
+        val product = realm.query<ProductEntity>("id == $0", 10).first().find()
 
-        // THEN - Verifichiamo che sia stato cancellato
-        val deletedProduct = realm.query<ProductEntity>("id == $0", 99).first().find()
-        assertNull("Il prodotto dovrebbe essere stato rimosso dal DB", deletedProduct)
+        // NON deve essere null (non cancellato)
+        assertNotNull(product)
+        // Deve essere false
+        assertFalse("Il flag dovrebbe essere diventato false", product?.isFavorite == true)
+
+        // WHEN - Rimettiamo il favorito
+        dataSource.toggleFavorite(10, "", 0.0, "", "", "")
+
+        // THEN
+        val productAgain = realm.query<ProductEntity>("id == $0", 10).first().find()
+        assertTrue("Il flag dovrebbe essere tornato true", productAgain?.isFavorite == true)
     }
 
     @Test
-    fun getFavoriteIds_returns_correct_set_of_IDs() = runTest {
-        // GIVEN - Popoliamo il DB con 3 prodotti favoriti
+    fun getAllProducts_returns_everything() = runTest {
         realm.write {
-            copyToRealm(ProductEntity().apply { id = 10; title = "A"; isFavorite = true })
-            copyToRealm(ProductEntity().apply { id = 20; title = "B"; isFavorite = true })
-            copyToRealm(ProductEntity().apply { id = 30; title = "C"; isFavorite = true })
+            copyToRealm(ProductEntity().apply { id = 1 })
+            copyToRealm(ProductEntity().apply { id = 2 })
         }
 
-        // WHEN - Chiediamo gli ID
-        val ids = dataSource.getFavoriteIds()
-
-        // THEN - Verifichiamo il set
-        assertEquals("Dovrebbero esserci 3 ID", 3, ids.size)
-        assertTrue(ids.contains(10))
-        assertTrue(ids.contains(20))
-        assertTrue(ids.contains(30))
-    }
-
-    @Test
-    fun getFavoriteProductsStream_emits_updates_reactively() = runTest {
-        // GIVEN - Il Flow viene osservato con Turbine
-        dataSource.getFavoriteProductsStream().test {
-
-            // 1. Stato iniziale: Lista vuota
-            val initialList = awaitItem()
-            assertTrue("La lista iniziale dovrebbe essere vuota", initialList.isEmpty())
-
-            // 2. Azione: Aggiungiamo un elemento tramite il DataSource
-            dataSource.toggleFavorite(77, "Reattivo", 10.0, "img", "desc", "cat")
-
-            // 3. Verifica: Il Flow deve emettere automaticamente la lista aggiornata
-            val updatedList = awaitItem()
-            assertEquals("La lista dovrebbe contenere 1 elemento", 1, updatedList.size)
-            assertEquals("Reattivo", updatedList[0].title)
-
-            // 4. Azione: Rimuoviamo l'elemento
-            dataSource.toggleFavorite(77, "Reattivo", 10.0, "img", "desc", "cat")
-
-            // 5. Verifica: Il Flow deve emettere lista vuota
-            val finalList = awaitItem()
-            assertTrue("La lista finale dovrebbe essere vuota", finalList.isEmpty())
-
-            cancelAndIgnoreRemainingEvents()
-        }
+        val list = dataSource.getAllProducts()
+        assertEquals(2, list.size)
     }
 }
