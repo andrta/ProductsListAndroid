@@ -68,7 +68,7 @@ graph LR
 **Clone the repository:**
 
 * **Bash:**
-git clone [https://github.com/yourusername/products-list-android.git](https://github.com/yourusername/products-list-android.git)
+git clone [https://github.com/andrta/ProductsListAndroid.git](https://github.com/andrta/ProductsListAndroid.git)
 
 * **Open in Android Studio:**
 Recommended version: Koala or newer.
