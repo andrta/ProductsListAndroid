@@ -6,26 +6,38 @@ import com.tamboo.testing.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.just
+import io.mockk.Runs
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class GetProductsUseCaseTest {
+class ToggleFavoriteUseCaseTest {
 
-    @get:Rule val mainDispatcherRule = MainDispatcherRule()
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     private val repository: ProductRepository = mockk()
-    private val useCase = GetProductsUseCase(repository)
+
+    private lateinit var useCase: ToggleFavoriteUseCase
+
+    @Before
+    fun setup() {
+        useCase = ToggleFavoriteUseCase(repository)
+    }
 
     @Test
-    fun `invoke should call repository getProducts`() = runTest {
-        val expected = listOf(Product(1, "Test", 10.0, "", "", "", false))
-        coEvery { repository.getProducts(any()) } returns expected
+    fun `invoke should call repository toggleFavorite with correct product`() = runTest {
+        // GIVEN
+        val product = Product(id = 1, title = "Test", price = 10.0, imageUrl = "", description = "", category = "", isFavorite = false)
 
-        val result = useCase(forceUpdate = true)
+        coEvery { repository.toggleFavorite(any()) } just Runs
 
-        assertEquals(expected, result)
-        coVerify(exactly = 1) { repository.getProducts(true) }
+        // WHEN
+        useCase(product)
+
+        // THEN
+        coVerify(exactly = 1) { repository.toggleFavorite(product) }
     }
 }

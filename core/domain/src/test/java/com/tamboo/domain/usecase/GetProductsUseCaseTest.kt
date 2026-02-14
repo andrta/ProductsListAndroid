@@ -8,6 +8,7 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
@@ -16,7 +17,13 @@ class GetProductsUseCaseTest {
     @get:Rule val mainDispatcherRule = MainDispatcherRule()
 
     private val repository: ProductRepository = mockk()
-    private val useCase = GetProductsUseCase(repository)
+
+    private lateinit var useCase: GetProductsUseCase
+
+    @Before
+    fun setup() {
+        useCase = GetProductsUseCase(repository)
+    }
 
     @Test
     fun `invoke should call repository getProducts`() = runTest {

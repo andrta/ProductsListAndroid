@@ -11,7 +11,6 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -20,7 +19,8 @@ import org.junit.Test
 
 class FavoritesViewModelTest {
 
-    @get:Rule val mainDispatcherRule = MainDispatcherRule()
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     private val getFavoritesUseCase: GetFavoriteProductsUseCase = mockk()
     private val toggleUseCase: ToggleFavoriteUseCase = mockk()
@@ -28,13 +28,11 @@ class FavoritesViewModelTest {
     @Test
     fun `favoritesState reflects emissions from UseCase`() = runTest {
         val mockFavorites = listOf(Product(1, "Fav", 10.0, "", "", "", true))
-        // Mockiamo il Flow
         every { getFavoritesUseCase() } returns flowOf(mockFavorites)
 
         val viewModel = FavoritesViewModel(getFavoritesUseCase, toggleUseCase)
 
         viewModel.favoritesState.test {
-            // Lo StateFlow emette immediatamente il valore iniziale o il primo flow item
             assertEquals(mockFavorites, awaitItem())
         }
     }

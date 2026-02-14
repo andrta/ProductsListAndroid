@@ -4,7 +4,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -19,8 +18,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -37,20 +36,16 @@ import com.tamboo.ui.navigation.Screen
 @Composable
 fun MainApp() {
     val navController = rememberNavController()
-
     val items = listOf(Screen.Products, Screen.Favorites, Screen.Profile)
-
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val screenTitle = when (currentRoute) {
-        Screen.Products.route -> "Fake Store Shop"
-        Screen.Favorites.route -> "Favourites"
-        Screen.Profile.route -> "My Profile"
-        else -> "Fake Store"
-    }
+    val currentScreen = items.find { it.route == currentRoute }
+    val screenTitle = currentScreen?.let {
+        stringResource(id = it.titleRes)
+    } ?: "Fake Store"
 
     Scaffold(
         topBar = {
@@ -75,7 +70,7 @@ fun MainApp() {
                 items.forEach { screen ->
                     NavigationBarItem(
                         icon = { Icon(screen.icon, contentDescription = null) },
-                        label = { Text(screen.title) },
+                        label = { Text(stringResource(id = screen.titleRes)) },
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {

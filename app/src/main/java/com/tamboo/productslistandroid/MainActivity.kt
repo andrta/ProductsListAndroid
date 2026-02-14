@@ -10,8 +10,7 @@ import com.tamboo.productslistandroid.ui.theme.ProductsListAndroidTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge() // Abilita edge-to-edge per la status bar trasparente
-
+        enableEdgeToEdge()
         setContent {
             ProductsListAndroidTheme {
                 MainApp()

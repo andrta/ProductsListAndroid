@@ -14,7 +14,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tamboo.productlist.R
 import com.tamboo.productslist.uistate.ProductsListUiState
 import com.tamboo.ui.components.ProductItem
 import org.koin.androidx.compose.koinViewModel
@@ -34,7 +36,7 @@ fun ProductsListScreen(
 
             is ProductsListUiState.Error -> {
                 Text(
-                    text = "Errore: ${uiState.message}",
+                    text = stringResource(R.string.error, uiState.message),
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.align(Alignment.Center)
                 )
@@ -43,7 +45,7 @@ fun ProductsListScreen(
             is ProductsListUiState.Success -> {
                 if (uiState.products.isEmpty()) {
                     Text(
-                        text = "Nessun prodotto disponibile",
+                        text = stringResource(R.string.no_product_available),
                         modifier = Modifier.align(Alignment.Center)
                     )
                 } else {

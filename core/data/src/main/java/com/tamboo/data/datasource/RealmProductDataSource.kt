@@ -11,8 +11,6 @@ import kotlinx.coroutines.flow.map
 class RealmProductDataSource(
     private val realm: Realm
 ) : ProductLocalDataSource {
-
-    // NUOVO: Restituisce TUTTI i prodotti (per la lista principale)
     override suspend fun getAllProducts(): List<ProductEntity> {
         return realm.query<ProductEntity>().find()
     }
@@ -30,7 +28,6 @@ class RealmProductDataSource(
             .map { it.list }
     }
 
-    // MODIFICATO: Ora non cancella più l'oggetto, cambia solo il flag
     override suspend fun toggleFavorite(
         id: Int,
         title: String,
@@ -43,11 +40,8 @@ class RealmProductDataSource(
             val existingProduct = query<ProductEntity>("id == $0", id).first().find()
 
             if (existingProduct != null) {
-                // Se esiste, invertiamo il flag e basta. Non cancelliamo!
                 existingProduct.isFavorite = !existingProduct.isFavorite
             } else {
-                // Edge case: Se l'utente clicca favorito su un prodotto che
-                // per qualche motivo non è ancora nel DB (es. errore cache precedente)
                 copyToRealm(ProductEntity().apply {
                     this.id = id
                     this.title = title
@@ -62,20 +56,16 @@ class RealmProductDataSource(
     }
 
     override suspend fun isCacheValid(expirationTimeInMillis: Long): Boolean {
-        // 1. Cerchiamo un prodotto qualsiasi (o il più recente/vecchio a seconda della logica)
-        // Qui prendiamo il primo che troviamo per semplicità.
-        val firstProduct = realm.query<ProductEntity>().first().find() ?: return false // Se vuoto, cache non valida
+        val firstProduct = realm.query<ProductEntity>().first().find() ?: return false
 
-        // 2. Calcoliamo quanto tempo è passato
         val currentTime = System.currentTimeMillis()
         val lastUpdate = firstProduct.lastUpdated
 
-        // 3. È valido se la differenza è MINORE del tempo di scadenza
         return (currentTime - lastUpdate) < expirationTimeInMillis
     }
 
     override suspend fun cacheResponse(dtoList: List<ProductDto>) {
-        val now = System.currentTimeMillis() // Timestamp attuale per tutti i prodotti
+        val now = System.currentTimeMillis()
 
         realm.write {
             dtoList.forEach { dto ->
@@ -90,7 +80,7 @@ class RealmProductDataSource(
                     category = dto.category
                     imageUrl = dto.image
                     isFavorite = wasFavorite
-                    lastUpdated = now // <--- AGGIORNIAMO IL TIMESTAMP
+                    lastUpdated = now
                 }, updatePolicy = UpdatePolicy.ALL)
             }
         }

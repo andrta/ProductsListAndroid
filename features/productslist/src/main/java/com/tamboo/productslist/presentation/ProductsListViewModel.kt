@@ -27,11 +27,10 @@ class ProductsListViewModel(
         viewModelScope.launch {
             _uiState.value = ProductsListUiState.Loading
             try {
-                // Chiamata all'Use Case invece del Repository
                 val products = getProductsUseCase(forceUpdate)
                 _uiState.value = ProductsListUiState.Success(products)
             } catch (e: Exception) {
-                _uiState.value = ProductsListUiState.Error(e.message ?: "Errore")
+                _uiState.value = ProductsListUiState.Error(e.message ?: "Error")
             }
         }
     }

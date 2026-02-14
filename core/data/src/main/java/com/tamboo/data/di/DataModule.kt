@@ -4,12 +4,22 @@ import com.tamboo.data.datasource.ProductLocalDataSource
 import com.tamboo.data.datasource.RealmProductDataSource
 import com.tamboo.data.repository.ProductRepositoryImpl
 import com.tamboo.domain.repository.ProductRepository
-import org.koin.core.module.dsl.bind
-import org.koin.core.module.dsl.singleOf
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import org.koin.dsl.module
 
 val dataModule = module {
-    singleOf(::RealmProductDataSource) { bind<ProductLocalDataSource>() }
+    single { Dispatchers.IO }
 
-    singleOf(::ProductRepositoryImpl) { bind<ProductRepository>() }
+    single<ProductLocalDataSource> {
+        RealmProductDataSource(get())
+    }
+
+    single<ProductRepository> {
+        ProductRepositoryImpl(
+            api = get(),
+            localDataSource = get(),
+            ioDispatcher = get()
+        )
+    }
 }
