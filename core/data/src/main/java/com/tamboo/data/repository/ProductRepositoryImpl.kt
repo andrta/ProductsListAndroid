@@ -4,7 +4,7 @@ import com.tamboo.data.datasource.ProductLocalDataSource
 import com.tamboo.data.mapper.toDomain
 import com.tamboo.domain.model.Product
 import com.tamboo.domain.repository.ProductRepository
-import com.tamboo.network.retrofit.FakeStoreApi
+import com.tamboo.network.service.FakeStoreApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.concurrent.TimeUnit

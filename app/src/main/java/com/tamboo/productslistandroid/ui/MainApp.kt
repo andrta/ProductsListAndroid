@@ -30,6 +30,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.tamboo.favorites.presentation.FavoritesScreen
 import com.tamboo.productslist.presentation.ProductsListScreen
+import com.tamboo.profile.presentation.ProfileScreen
 import com.tamboo.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,24 +70,19 @@ fun MainApp() {
         },
         bottomBar = {
             NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
 
                 items.forEach { screen ->
                     NavigationBarItem(
                         icon = { Icon(screen.icon, contentDescription = null) },
                         label = { Text(screen.title) },
-                        // Logica per evidenziare l'icona attiva
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {
-                                // Evita di accumulare schermate nello stack quando clicchi avanti e indietro
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
-                                // Evita di aprire copie multiple della stessa schermata se ci clicchi sopra ancora
                                 launchSingleTop = true
-                                // Ripristina lo stato (es. scroll) quando torni su questa tab
                                 restoreState = true
                             }
                         }
@@ -119,9 +115,7 @@ fun MainApp() {
             }
 
             composable(Screen.Profile.route) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Profile Coming Soon", style = MaterialTheme.typography.headlineMedium)
-                }
+                ProfileScreen()
             }
         }
     }

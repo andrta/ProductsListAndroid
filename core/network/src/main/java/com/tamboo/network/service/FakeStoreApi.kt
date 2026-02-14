@@ -1,4 +1,4 @@
-package com.tamboo.network.retrofit
+package com.tamboo.network.service
 
 import com.tamboo.network.model.ProductDto
 import retrofit2.http.GET

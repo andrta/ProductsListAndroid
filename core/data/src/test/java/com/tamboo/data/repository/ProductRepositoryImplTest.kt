@@ -6,7 +6,7 @@ import com.tamboo.database.model.ProductEntity
 import com.tamboo.domain.model.Product
 import com.tamboo.network.model.ProductDto
 import com.tamboo.network.model.RatingDto
-import com.tamboo.network.retrofit.FakeStoreApi
+import com.tamboo.network.service.FakeStoreApi
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
