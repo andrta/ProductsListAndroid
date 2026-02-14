@@ -183,4 +183,26 @@ class RealmProductDataSourceTest {
         assertEquals(1, secondEmission.size)
         assertEquals(100, secondEmission[0].id)
     }
+
+    @Test
+    fun getFavoriteIdsStream_emits_updates() = runTest {
+        // 1. Initial state (Empty)
+        val initial = dataSource.getFavoriteIdsStream().first()
+        assertTrue(initial.isEmpty())
+
+        // 2. Add a favorite
+        dataSource.toggleFavorite(77, "Reactive Test", 10.0, "", "", "")
+
+        // 3. Verify stream update contains the ID
+        val afterAdd = dataSource.getFavoriteIdsStream().first()
+        assertEquals(1, afterAdd.size)
+        assertTrue(afterAdd.contains(77))
+
+        // 4. Remove favorite
+        dataSource.toggleFavorite(77, "Reactive Test", 10.0, "", "", "")
+
+        // 5. Verify stream update is empty again
+        val afterRemove = dataSource.getFavoriteIdsStream().first()
+        assertTrue(afterRemove.isEmpty())
+    }
 }

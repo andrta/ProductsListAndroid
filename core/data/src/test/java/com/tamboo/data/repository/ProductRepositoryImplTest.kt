@@ -8,6 +8,7 @@ import com.tamboo.network.model.RatingDto
 import com.tamboo.network.service.FakeStoreApi
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.verify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -189,5 +190,20 @@ class ProductRepositoryImplTest {
         // THEN
         assertEquals(1, resultList.size)
         assertEquals(fakeProductEntity.title, resultList[0].title)
+    }
+
+    @Test
+    fun `observeFavoriteIds delegates to localDataSource`() = runTest {
+        // GIVEN
+        val expectedIds = setOf(1, 2, 3)
+        every { localDataSource.getFavoriteIdsStream() } returns flowOf(expectedIds)
+
+        // WHEN
+        val resultFlow = repository.observeFavoriteIds()
+        val result = resultFlow.first()
+
+        // THEN
+        assertEquals(expectedIds, result)
+        verify(exactly = 1) { localDataSource.getFavoriteIdsStream() }
     }
 }
