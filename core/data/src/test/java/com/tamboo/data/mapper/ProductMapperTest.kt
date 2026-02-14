@@ -12,33 +12,29 @@ class ProductMapperTest {
 
     @Test
     fun `ProductDto_toDomain maps fields correctly and sets favorite flag`() {
-        // GIVEN - Un DTO simulato (come se arrivasse dalla rete)
+        // GIVEN
         val dto = ProductDto(
             id = 101,
-            title = "Zaino Test",
+            title = "Title",
             price = 45.50,
-            description = "Descrizione test",
-            category = "Accessori",
+            description = "Desciption",
+            category = "A",
             image = "https://example.com/image.png",
-            rating = RatingDto(rate = 4.5, count = 100) // Assumendo che il DTO abbia questo campo
+            rating = RatingDto(rate = 4.5, count = 100)
         )
         val isFavoriteExpected = true
 
-        // WHEN - Eseguiamo il mapping
+        // WHEN
         val domainModel = dto.toDomain(isFavorite = isFavoriteExpected)
 
-        // THEN - Verifichiamo che i dati siano stati copiati correttamente
+        // THEN
         assertEquals(dto.id, domainModel.id)
         assertEquals(dto.title, domainModel.title)
-        assertEquals(dto.price, domainModel.price, 0.0) // 0.0 è la tolleranza per i double
+        assertEquals(dto.price, domainModel.price, 0.0)
         assertEquals(dto.description, domainModel.description)
         assertEquals(dto.category, domainModel.category)
-
-        // Verifica cruciale: il campo 'image' del DTO diventa 'imageUrl' nel dominio
         assertEquals(dto.image, domainModel.imageUrl)
-
-        // Verifica il flag passato come argomento
-        assertTrue("Il flag isFavorite dovrebbe essere true", domainModel.isFavorite)
+        assertTrue(domainModel.isFavorite)
     }
 
     @Test
@@ -58,18 +54,18 @@ class ProductMapperTest {
 
     @Test
     fun `ProductEntity_toDomain maps all fields correctly`() {
-        // GIVEN - Un'entità simulata (come se arrivasse dal DB Realm)
+        // GIVEN
         val entity = ProductEntity().apply {
             id = 202
-            title = "Maglietta Realm"
+            title = "Title"
             price = 19.99
-            description = "Dal Database"
-            category = "Abbigliamento"
+            description = "Description"
+            category = "A"
             imageUrl = "https://example.com/db_image.jpg"
             isFavorite = true
         }
 
-        // WHEN - Eseguiamo il mapping
+        // WHEN
         val domainModel = entity.toDomain()
 
         // THEN
@@ -78,11 +74,7 @@ class ProductMapperTest {
         assertEquals(entity.price, domainModel.price, 0.0)
         assertEquals(entity.description, domainModel.description)
         assertEquals(entity.category, domainModel.category)
-
-        // Verifica cruciale: Entity ha 'imageUrl', Domain ha 'imageUrl'
         assertEquals(entity.imageUrl, domainModel.imageUrl)
-
-        // Verifica che il flag isFavorite sia stato preservato dal DB
         assertEquals(entity.isFavorite, domainModel.isFavorite)
     }
 }

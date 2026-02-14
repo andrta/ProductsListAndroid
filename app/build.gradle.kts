@@ -34,8 +34,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            excludes += "META-INF/LICENSE.md" // <--- AGGIUNGI QUESTA RIGA
-            excludes += "META-INF/LICENSE-notice.md" // Spesso serve anche questa
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/LICENSE-notice.md"
         }
     }
 }
@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.icons.extended)
 
     // Koin Android
     implementation(libs.koin.android)
@@ -57,7 +58,6 @@ dependencies {
 
     // UI & Navigation
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.material.icons.extended)
 
     // Image Loading
     implementation(libs.coil.compose)

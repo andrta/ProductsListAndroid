@@ -5,61 +5,54 @@ import com.tamboo.data.mapper.toDomain
 import com.tamboo.domain.model.Product
 import com.tamboo.domain.repository.ProductRepository
 import com.tamboo.network.service.FakeStoreApi
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 class ProductRepositoryImpl(
     private val api: FakeStoreApi,
-    private val localDataSource: ProductLocalDataSource
+    private val localDataSource: ProductLocalDataSource,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ProductRepository {
-    // Definiamo la durata della cache (es. 1 Ora)
     private val CACHE_TIMEOUT = TimeUnit.HOURS.toMillis(1)
 
-    // Aggiungiamo il parametro forceUpdate (default false)
-    override suspend fun getProducts(forceUpdate: Boolean): List<Product> {
+    override suspend fun getProducts(forceUpdate: Boolean): List<Product> =
+        withContext(ioDispatcher) {
+            val isCacheValid = localDataSource.isCacheValid(CACHE_TIMEOUT)
+            val shouldFetchFromNetwork = forceUpdate || !isCacheValid
 
-        // 1. Controlliamo se la cache è valida
-        val isCacheValid = localDataSource.isCacheValid(CACHE_TIMEOUT)
-
-        // 2. Logica di aggiornamento:
-        // Scarichiamo se:
-        // - L'utente ha forzato l'update (Pull-to-refresh)
-        // - OPPURE la cache è scaduta/vuota
-        val shouldFetchFromNetwork = forceUpdate || !isCacheValid
-
-        if (shouldFetchFromNetwork) {
-            try {
-                val remoteProducts = api.getProducts()
-                localDataSource.cacheResponse(remoteProducts) // Questo aggiorna anche lastUpdated
-            } catch (e: Exception) {
-                // Se la rete fallisce:
-                // - Se era un forceUpdate, potremmo voler lanciare errore alla UI
-                // - Se era un update automatico, silenziamo l'errore e usiamo la cache vecchia
-                if (forceUpdate) throw e
-                e.printStackTrace()
+            if (shouldFetchFromNetwork) {
+                try {
+                    val remoteProducts = api.getProducts()
+                    localDataSource.cacheResponse(remoteProducts)
+                } catch (e: Exception) {
+                    if (forceUpdate) throw e
+                    e.printStackTrace()
+                }
             }
+
+            val localProducts = localDataSource.getAllProducts()
+
+            if (localProducts.isEmpty() && shouldFetchFromNetwork) {
+                throw Exception("No offline data.")
+            }
+
+            localProducts.map { it.toDomain() }
         }
-
-        // 3. Ritorniamo SEMPRE dal DB (SSOT)
-        val localProducts = localDataSource.getAllProducts()
-
-        if (localProducts.isEmpty() && shouldFetchFromNetwork) {
-            // Se il DB è vuoto e abbiamo provato a scaricare (fallendo), lanciamo errore
-            throw Exception("Dati non disponibili offline.")
-        }
-
-        return localProducts.map { it.toDomain() }
-    }
 
     override fun getFavoriteProducts(): Flow<List<Product>> {
         return localDataSource.getFavoriteProductsStream()
             .map { entities ->
                 entities.map { it.toDomain() }
             }
+            .flowOn(ioDispatcher)
     }
 
-    override suspend fun toggleFavorite(product: Product) {
+    override suspend fun toggleFavorite(product: Product) = withContext(ioDispatcher) {
         localDataSource.toggleFavorite(
             id = product.id,
             title = product.title,

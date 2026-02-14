@@ -10,7 +10,6 @@ android {
 
     defaultConfig {
         minSdk = 26
-        // Realm richiede un setup specifico per il test runner a volte, ma per ora standard va bene
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {

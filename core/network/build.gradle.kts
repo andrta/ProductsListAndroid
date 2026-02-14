@@ -1,16 +1,15 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm) // Usa il plugin JVM puro
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.gmazzo.buildconfig)
+}
+
+buildConfig {
+    packageName("com.tamboo.network")
+    buildConfigField("String", "BASE_URL", "\"https://fakestoreapi.com/\"")
 }
 
 dependencies {
-    // Networking (Puri Java/Kotlin)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.moshi)
-    implementation(libs.moshi.kotlin)
-
-    // Koin (Solo Core, niente Android)
+    implementation(libs.bundles.networking)
     implementation(libs.koin.core)
-
-    // Coroutines
     implementation(libs.kotlinx.coroutines.core)
 }

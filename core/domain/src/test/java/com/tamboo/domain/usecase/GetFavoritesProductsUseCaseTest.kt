@@ -1,31 +1,46 @@
 package com.tamboo.domain.usecase
 
+import app.cash.turbine.test
 import com.tamboo.domain.model.Product
 import com.tamboo.domain.repository.ProductRepository
 import com.tamboo.testing.MainDispatcherRule
-import io.mockk.coEvery
-import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 
-class GetProductsUseCaseTest {
+class GetFavoriteProductsUseCaseTest {
 
-    @get:Rule val mainDispatcherRule = MainDispatcherRule()
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     private val repository: ProductRepository = mockk()
-    private val useCase = GetProductsUseCase(repository)
+
+    private lateinit var useCase: GetFavoriteProductsUseCase
+
+    @Before
+    fun setup() {
+        useCase = GetFavoriteProductsUseCase(repository)
+    }
 
     @Test
-    fun `invoke should call repository getProducts`() = runTest {
-        val expected = listOf(Product(1, "Test", 10.0, "", "", "", false))
-        coEvery { repository.getProducts(any()) } returns expected
+    fun `invoke should call repository getFavoriteProducts`() = runTest {
+        // GIVEN
+        val expected = listOf(Product(1, "Test", 10.0, "", "", "", true))
 
-        val result = useCase(forceUpdate = true)
+        every { repository.getFavoriteProducts() } returns flowOf(expected)
 
-        assertEquals(expected, result)
-        coVerify(exactly = 1) { repository.getProducts(true) }
+        // WHEN & THEN
+        useCase().test {
+            val result = awaitItem()
+            assertEquals(expected, result)
+            awaitComplete()
+        }
+        verify(exactly = 1) { repository.getFavoriteProducts() }
     }
 }

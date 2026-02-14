@@ -20,7 +20,7 @@ import com.tamboo.domain.model.Product
 fun ProductItem(
     product: Product,
     onFavoriteClick: () -> Unit,
-    modifier: Modifier = Modifier // Buona pratica: passare sempre il modifier
+    modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier

@@ -32,10 +32,8 @@ dependencies {
 
     implementation(libs.realm.base)
 
-    // --- UNIT TEST (src/test) ---
     testImplementation(project(":core:testing"))
 
-    // --- INSTRUMENTED TEST (src/androidTest) ---
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.kotlinx.coroutines.test)

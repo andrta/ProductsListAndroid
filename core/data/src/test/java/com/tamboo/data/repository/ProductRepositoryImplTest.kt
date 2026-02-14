@@ -1,6 +1,5 @@
 package com.tamboo.data.repository
 
-import app.cash.turbine.test
 import com.tamboo.data.datasource.ProductLocalDataSource
 import com.tamboo.database.model.ProductEntity
 import com.tamboo.domain.model.Product
@@ -11,156 +10,184 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 class ProductRepositoryImplTest {
-
-    // 1. Mock delle dipendenze
     private val api: FakeStoreApi = mockk()
-
-    // relaxed = true è importante: evita di dover stubbare metodi che non ritornano nulla (Unit)
-    // come cacheResponse o toggleFavorite, se non ci interessa il loro risultato specifico.
     private val localDataSource: ProductLocalDataSource = mockk(relaxed = true)
 
-    // 2. System Under Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var repository: ProductRepositoryImpl
+    private val fakeProductEntity = ProductEntity().apply {
+        id = 1
+        title = "Test Product"
+        price = 10.0
+        imageUrl = "url"
+        description = "desc"
+        category = "cat"
+        isFavorite = false
+    }
+
+    private val fakeProductDto = ProductDto(
+        id = 1,
+        title = "Test Product",
+        price = 10.0,
+        description = "desc",
+        category = "cat",
+        image = "url",
+        rating = RatingDto(4.5, 10)
+    )
 
     @Before
     fun setup() {
-        repository = ProductRepositoryImpl(api, localDataSource)
+        repository = ProductRepositoryImpl(api, localDataSource, testDispatcher)
     }
 
     @Test
-    fun `getProducts refreshes cache from API and returns data from DB (SSOT)`() = runTest {
+    fun `getProducts returns local data WITHOUT network call when cache is valid and forceUpdate is false`() =
+        runTest {
+            // GIVEN
+            coEvery { localDataSource.isCacheValid(any()) } returns true
+            coEvery { localDataSource.getAllProducts() } returns listOf(fakeProductEntity)
+
+            // WHEN
+            val result = repository.getProducts(forceUpdate = false)
+
+            // THEN
+            coVerify(exactly = 0) { api.getProducts() }
+            coVerify(exactly = 1) { localDataSource.getAllProducts() }
+
+            assertEquals(1, result.size)
+            assertEquals(fakeProductEntity.title, result[0].title)
+        }
+
+    @Test
+    fun `getProducts calls network AND saves to cache when cache is invalid`() = runTest {
         // GIVEN
-        val remoteData = listOf(createProductDto(1, "Titolo Remoto"))
-
-        // Simuliamo che nel DB ci sia il dato (magari con isFavorite=true)
-        val localData = listOf(
-            ProductEntity().apply {
-                id = 1
-                title = "Titolo Remoto"
-                isFavorite = true // Il DB è la fonte di verità per i favoriti
-            }
-        )
-
-        // Stubbing
-        coEvery { api.getProducts() } returns remoteData
-        coEvery { localDataSource.getAllProducts() } returns localData // Il repo deve leggere da qui
+        coEvery { localDataSource.isCacheValid(any()) } returns false
+        coEvery { api.getProducts() } returns listOf(fakeProductDto)
+        coEvery { localDataSource.getAllProducts() } returns listOf(fakeProductEntity)
 
         // WHEN
-        val result = repository.getProducts()
+        val result = repository.getProducts(forceUpdate = false)
 
         // THEN
-        // 1. Verifica comportamento SSOT: Il dato finale deve avere le proprietà del DB (es. isFavorite=true)
-        assertEquals(1, result.size)
-        assertEquals("Titolo Remoto", result[0].title)
-        assertTrue("Il flag isFavorite deve provenire dal DB locale", result[0].isFavorite)
-
-        // 2. Verifica interazioni:
-        // Deve aver chiamato l'API
         coVerify(exactly = 1) { api.getProducts() }
-        // Deve aver salvato i dati nella cache
-        coVerify(exactly = 1) { localDataSource.cacheResponse(remoteData) }
-        // Deve aver letto i dati dal DB per restituirli
-        coVerify(exactly = 1) { localDataSource.getAllProducts() }
+        coVerify(exactly = 1) { localDataSource.cacheResponse(listOf(fakeProductDto)) }
+        assertEquals(1, result.size)
     }
 
     @Test
-    fun `getProducts returns local data when API fails (Offline Support)`() = runTest {
+    fun `getProducts calls network even if cache is valid when forceUpdate is TRUE`() = runTest {
         // GIVEN
-        // L'API fallisce (es. Nessuna connessione)
-        coEvery { api.getProducts() } throws Exception("Network Error")
-
-        // Ma abbiamo dati vecchi nel DB
-        val oldLocalData = listOf(
-            ProductEntity().apply { id = 1; title = "Vecchio Titolo"; isFavorite = false }
-        )
-        coEvery { localDataSource.getAllProducts() } returns oldLocalData
+        coEvery { localDataSource.isCacheValid(any()) } returns true // Cache valida
+        coEvery { api.getProducts() } returns listOf(fakeProductDto)
+        coEvery { localDataSource.getAllProducts() } returns listOf(fakeProductEntity)
 
         // WHEN
-        val result = repository.getProducts()
+        repository.getProducts(forceUpdate = true)
 
         // THEN
-        // Non deve lanciare eccezioni, ma restituire i dati locali
-        assertEquals(1, result.size)
-        assertEquals("Vecchio Titolo", result[0].title)
-
-        // Verifichiamo che NON abbia provato a salvare nulla (visto che l'API è fallita)
-        coVerify(exactly = 0) { localDataSource.cacheResponse(any()) }
+        coVerify(exactly = 1) { api.getProducts() }
     }
 
     @Test
-    fun `getFavoriteProducts emits mapped domain objects`() = runTest {
-        // GIVEN - Una lista di entity dal DB
-        val dbEntities = listOf(
-            ProductEntity().apply {
-                id = 10
-                title = "Giacca"
-                price = 100.0
-                isFavorite = true
-            }
-        )
+    fun `getProducts suppresses network error and returns local data if forceUpdate is FALSE`() =
+        runTest {
+            // GIVEN
+            coEvery { localDataSource.isCacheValid(any()) } returns false
+            coEvery { api.getProducts() } throws IOException("Network error")
+            coEvery { localDataSource.getAllProducts() } returns listOf(fakeProductEntity)
 
-        // Stubbing: il DataSource restituisce un Flow di questa lista
-        every { localDataSource.getFavoriteProductsStream() } returns flowOf(dbEntities)
+            // WHEN
+            val result = repository.getProducts(forceUpdate = false)
 
-        // WHEN & THEN - Testiamo il Flow con Turbine
-        repository.getFavoriteProducts().test {
-            val item = awaitItem() // Aspettiamo la prima emissione
+            // THEN
+            assertEquals(1, result.size)
+            coVerify(exactly = 0) { localDataSource.cacheResponse(any()) }
+        }
 
-            assertEquals(1, item.size)
-            assertEquals(10, item[0].id)
-            assertEquals("Giacca", item[0].title)
-            assertTrue(item[0].isFavorite)
+    @Test
+    fun `getProducts re-throws network error if forceUpdate is TRUE`() = runTest {
+        // GIVEN
+        coEvery { localDataSource.isCacheValid(any()) } returns true
+        coEvery { api.getProducts() } throws IOException("Network error")
 
-            awaitComplete()
+        // WHEN / THEN
+        try {
+            repository.getProducts(forceUpdate = true)
+            throw AssertionError("IOException")
+        } catch (e: IOException) {
+            assertEquals("Network error", e.message)
         }
     }
 
     @Test
-    fun `toggleFavorite calls datasource correctly`() = runTest {
+    fun `getProducts throws Exception when network fails AND local data is empty`() = runTest {
         // GIVEN
-        val product = Product(
-            id = 5,
-            title = "Cappello",
-            price = 15.0,
-            description = "Bello",
-            category = "Accessori",
-            imageUrl = "img_url",
+        coEvery { localDataSource.isCacheValid(any()) } returns false
+        coEvery { api.getProducts() } throws IOException("Network error")
+        coEvery { localDataSource.getAllProducts() } returns emptyList()
+
+        // WHEN / THEN
+        try {
+            repository.getProducts(forceUpdate = false)
+            throw AssertionError("Exception thrown")
+        } catch (e: Exception) {
+            assertEquals("No offline data.", e.message)
+        }
+    }
+
+    @Test
+    fun `toggleFavorite delegates to localDataSource`() = runTest {
+        // GIVEN
+        val domainProduct = Product(
+            id = 1,
+            title = "Test",
+            price = 10.0,
+            description = "desc",
+            category = "cat",
+            imageUrl = "url",
             isFavorite = false
         )
 
         // WHEN
-        repository.toggleFavorite(product)
+        repository.toggleFavorite(domainProduct)
 
         // THEN
-        // Verifichiamo solo che il Repository passi correttamente i parametri al DataSource
         coVerify(exactly = 1) {
             localDataSource.toggleFavorite(
-                id = 5,
-                title = "Cappello",
-                price = 15.0,
-                image = "img_url",
-                description = "Bello",
-                category = "Accessori"
+                id = 1,
+                title = "Test",
+                price = 10.0,
+                image = "url",
+                description = "desc",
+                category = "cat"
             )
         }
     }
 
-    // --- Helper Methods ---
-    private fun createProductDto(id: Int, title: String) = ProductDto(
-        id = id,
-        title = title,
-        price = 10.0,
-        description = "Desc",
-        category = "Cat",
-        image = "url",
-        rating = RatingDto(4.5, 10)
-    )
+    @Test
+    fun `getFavoriteProducts maps entities to domain objects`() = runTest {
+        // GIVEN
+        val entities = listOf(fakeProductEntity)
+        every { localDataSource.getFavoriteProductsStream() } returns flowOf(entities)
+
+        // WHEN
+        val resultFlow = repository.getFavoriteProducts()
+        val resultList = resultFlow.first()
+
+        // THEN
+        assertEquals(1, resultList.size)
+        assertEquals(fakeProductEntity.title, resultList[0].title)
+    }
 }

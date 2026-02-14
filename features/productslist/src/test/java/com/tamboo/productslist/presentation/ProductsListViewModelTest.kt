@@ -50,21 +50,14 @@ class ProductsListViewModelTest {
         coEvery { toggleFavoriteUseCase(any()) } returns Unit
 
         viewModel = ProductsListViewModel(getProductsUseCase, toggleFavoriteUseCase)
-
-        // Puliamo la coda delle coroutine dell'init
         advanceUntilIdle()
 
         // WHEN
         viewModel.toggleFavorite(product)
-
-        // Forza l'esecuzione della coroutine lanciata da toggleFavorite
         advanceUntilIdle()
 
         // THEN
-        // 1. Verifica che l'usecase di toggle sia stato chiamato con il prodotto corretto
         coVerify(exactly = 1) { toggleFavoriteUseCase(product) }
-
-        // 2. Verifica che i prodotti siano stati ricaricati (1 volta init + 1 volta dopo toggle)
         coVerify(exactly = 2) { getProductsUseCase(any()) }
     }
 }

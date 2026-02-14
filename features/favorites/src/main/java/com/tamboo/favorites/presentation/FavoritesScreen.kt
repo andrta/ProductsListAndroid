@@ -16,9 +16,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tamboo.favorites.R
 import com.tamboo.ui.components.ProductItem
 import org.koin.androidx.compose.koinViewModel
 
@@ -60,12 +62,12 @@ fun EmptyFavoritesPlaceholder(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "❤️",
+            text = stringResource(R.string.heart_text),
             style = MaterialTheme.typography.displayLarge
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Non hai ancora aggiunto prodotti ai favoriti.",
+            text = stringResource(R.string.no_products_in_the_favorites_list),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center
         )
