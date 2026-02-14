@@ -79,4 +79,5 @@ dependencies {
 
     implementation(project(":features:productslist"))
     implementation(project(":features:favorites"))
+    implementation(project(":features:profile"))
 }

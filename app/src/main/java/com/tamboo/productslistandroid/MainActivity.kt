@@ -14,7 +14,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ProductsListAndroidTheme {
-                // Qui parte tutta l'applicazione
                 MainApp()
             }
         }

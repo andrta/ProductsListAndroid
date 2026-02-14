@@ -1,6 +1,6 @@
 package com.tamboo.network.di
 
-import com.tamboo.network.retrofit.FakeStoreApi
+import com.tamboo.network.service.FakeStoreApi
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import org.koin.dsl.module
