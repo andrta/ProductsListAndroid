@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.map
 class RealmProductDataSource(
     private val realm: Realm
 ) : ProductLocalDataSource {
+
     override suspend fun getAllProducts(): List<ProductEntity> {
         return realm.query<ProductEntity>().find()
     }
@@ -20,6 +21,14 @@ class RealmProductDataSource(
             .find()
             .map { it.id }
             .toSet()
+    }
+
+    override fun getFavoriteIdsStream(): Flow<Set<Int>> {
+        return realm.query<ProductEntity>("isFavorite == $0", true)
+            .asFlow()
+            .map { changes ->
+                changes.list.map { it.id }.toSet()
+            }
     }
 
     override fun getFavoriteProductsStream(): Flow<List<ProductEntity>> {
@@ -50,6 +59,7 @@ class RealmProductDataSource(
                     this.description = description
                     this.category = category
                     this.isFavorite = true
+                    this.lastUpdated = System.currentTimeMillis()
                 })
             }
         }

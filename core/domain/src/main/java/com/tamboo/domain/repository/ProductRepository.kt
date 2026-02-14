@@ -7,4 +7,5 @@ interface ProductRepository {
     suspend fun getProducts(forceUpdate: Boolean = false): List<Product>
     fun getFavoriteProducts(): Flow<List<Product>>
     suspend fun toggleFavorite(product: Product)
+    fun observeFavoriteIds(): Flow<Set<Int>>
 }

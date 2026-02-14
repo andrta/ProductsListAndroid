@@ -62,4 +62,9 @@ class ProductRepositoryImpl(
             category = product.category
         )
     }
+
+    override fun observeFavoriteIds(): Flow<Set<Int>> {
+        return localDataSource.getFavoriteIdsStream()
+            .flowOn(ioDispatcher)
+    }
 }
