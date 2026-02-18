@@ -3,8 +3,6 @@
 <img width="180" height="404" alt="Screenshot_20260214_120600" src="https://github.com/user-attachments/assets/5240733c-fc52-4430-94b8-7888b6a094fc" />
 <img width="180" height="404" alt="Screenshot_20260214_120621" src="https://github.com/user-attachments/assets/8cd2d6e1-f29d-464b-8900-39358d4e7674" />
 <img width="180" height="404" alt="Screenshot_20260214_120627" src="https://github.com/user-attachments/assets/90c7caeb-c4d3-4e35-b9e8-497ea5656672" />
-<img width="180" height="404" alt="Screenshot_20260214_120608" src="https://github.com/user-attachments/assets/b887103a-5507-4535-8837-9bb19a329ca2" />
-
 
 
 # 🛍️ Modern Android Product Explorer
